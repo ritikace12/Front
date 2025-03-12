@@ -4,6 +4,9 @@ import { useNavigate } from "react-router-dom";
 
 const EventPage = () => {
   const [events, setEvents] = useState([]);
+  const [filteredEvents, setFilteredEvents] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("All");
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
   const navigate = useNavigate();
 
@@ -11,36 +14,44 @@ const EventPage = () => {
   useEffect(() => {
     fetch("https://hub-hesv.onrender.com/api/events")
       .then((res) => res.json())
-      .then((data) => setEvents(data))
+      .then((data) => {
+        setEvents(data);
+        setFilteredEvents(data);
+      })
       .catch((err) => console.error("Error fetching events:", err));
   }, []);
 
   // Function to Add New Event 
-   
   const onSubmit = async (data) => {
-    console.log("Submitting Data:", data); // Debugging
-  
     try {
       const response = await fetch("https://hub-hesv.onrender.com/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-  
+
       if (response.ok) {
         const savedEvent = await response.json();
-        console.log("Event Saved Successfully:", savedEvent);
         setEvents([...events, savedEvent]);
+        setFilteredEvents([...events, savedEvent]); // Update filtered list
         reset();
       } else {
-        const errorMsg = await response.json();
-        console.error("Error saving event:", errorMsg);
+        console.error("Error saving event:", await response.json());
       }
     } catch (error) {
       console.error("Error:", error);
     }
   };
-   
+
+  // Function to Filter Events by Category
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
+    if (category === "All") {
+      setFilteredEvents(events);
+    } else {
+      setFilteredEvents(events.filter(event => event.category === category));
+    }
+  };
 
   return (
     <div className="relative w-full min-h-screen flex flex-col items-center bg-[#f4f4f4]">
@@ -72,9 +83,23 @@ const EventPage = () => {
         <p className="text-lg text-gray-600 mt-2">Find events that bring people together, or create your own.</p>
       </div>
 
+      {/* Filter Category Dropdown */}
+      <div className="w-full max-w-6xl px-6 py-4 flex justify-end">
+        <select 
+          className="p-2 border rounded-md bg-white text-gray-700"
+          value={selectedCategory}
+          onChange={(e) => handleCategoryChange(e.target.value)}
+        >
+          <option value="All">All Categories</option>
+          <option value="Religious">Religious</option>
+          <option value="Social">Social</option>
+          <option value="Charity">Charity</option>
+        </select>
+      </div>
+
       {/* Events List */}
       <div className="max-w-6xl w-full px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-        {events.map((event, index) => (
+        {filteredEvents.map((event, index) => (
           <div key={index} className="p-4 border rounded-lg shadow-lg bg-white">
             <h3 className="text-xl font-semibold text-[#181D3B]">{event.title}</h3>
             <p className="text-sm text-gray-600">📅 {event.date} | 📍 {event.place}</p>
